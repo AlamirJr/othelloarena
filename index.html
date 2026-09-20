@@ -1,0 +1,2574 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f5132" />
+  <link rel="icon" href="othello_arena.ico" type="image/x-icon" />
+  <title>Othello Arena</title>
+  <meta name="description" content="Jogue Othello no navegador, contra outra pessoa ou contra o computador." />
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#111827;
+      --panel-2:#182235;
+      --text:#f8fafc;
+      --muted:#a9b5c8;
+      --accent:#22c55e;
+      --accent-2:#16a34a;
+      --board:#147a42;
+      --board-hover:#199052;
+      --grid:#0b4a2b;
+      --danger:#ef4444;
+      --gold:#f59e0b;
+      --shadow:0 18px 50px rgba(0,0,0,.28);
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at top, rgba(34,197,94,.12), transparent 30rem),
+        var(--bg);
+      color:var(--text);
+      font-family:Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, select{font:inherit}
+    button{cursor:pointer}
+
+    .shell{
+      width:min(1120px, 94vw);
+      margin:0 auto;
+      padding:24px 0 40px;
+    }
+
+    header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      margin-bottom:22px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .logo{
+      width:48px;
+      height:48px;
+      border-radius:50%;
+      position:relative;
+      background:#fff;
+      box-shadow:var(--shadow);
+      border:3px solid rgba(255,255,255,.18);
+      overflow:hidden;
+    }
+
+    .logo::before{
+      content:"";
+      position:absolute;
+      inset:0 50% 0 0;
+      background:#111;
+    }
+
+    h1{
+      margin:0;
+      font-size:clamp(1.5rem,3vw,2.25rem);
+      line-height:1;
+    }
+
+    .subtitle{
+      margin-top:4px;
+      color:var(--muted);
+      font-size:.92rem;
+    }
+
+    .top-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .btn{
+      border:0;
+      border-radius:12px;
+      padding:10px 14px;
+      background:#263247;
+      color:var(--text);
+      font-weight:700;
+      transition:.18s ease;
+    }
+
+    .btn:hover{transform:translateY(-1px); filter:brightness(1.08)}
+    .btn.primary{background:var(--accent-2)}
+    .btn.ghost{background:transparent; border:1px solid #35425b}
+    .btn.danger{background:#7f1d1d}
+
+    .layout{
+      display:grid;
+      grid-template-columns:minmax(0, 1.45fr) minmax(290px, .75fr);
+      gap:22px;
+      align-items:start;
+    }
+
+    .panel{
+      background:linear-gradient(180deg, rgba(255,255,255,.03), transparent), var(--panel);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+    }
+
+    .game-panel{padding:18px}
+    .side-panel{padding:18px; display:grid; gap:16px}
+
+    .toolbar{
+      display:grid;
+      grid-template-columns:1fr 1fr auto;
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .field{
+      display:grid;
+      gap:6px;
+    }
+
+    .field label{
+      color:var(--muted);
+      font-size:.8rem;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    select{
+      width:100%;
+      background:#1c2940;
+      color:var(--text);
+      border:1px solid #34435d;
+      border-radius:10px;
+      padding:10px 12px;
+      outline:none;
+    }
+
+    .scorebar{
+      display:grid;
+      grid-template-columns:1fr auto 1fr;
+      gap:10px;
+      align-items:center;
+      margin-bottom:12px;
+    }
+
+    .score{
+      background:var(--panel-2);
+      border-radius:14px;
+      padding:12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .score.white-score{flex-direction:row-reverse}
+    .disc-mini{
+      width:27px;height:27px;border-radius:50%;
+      flex:0 0 auto;
+      box-shadow:inset 0 0 7px rgba(255,255,255,.15), 0 2px 5px rgba(0,0,0,.35);
+    }
+    .disc-mini.black{background:#0b0b0b}
+    .disc-mini.white{background:#fff}
+    .score strong{font-size:1.35rem}
+    .vs{color:var(--muted); font-weight:800}
+
+    .status{
+      min-height:27px;
+      text-align:center;
+      font-weight:800;
+      margin:8px 0 14px;
+      color:#dce7f7;
+    }
+
+    .board-wrap{
+      max-width:680px;
+      width:calc(100% - 26px);
+      margin:20px auto 0;
+      position:relative;
+      --coord-board-pad:5px;
+    }
+
+    .board-coords{
+      position:absolute;
+      pointer-events:none;
+      user-select:none;
+      color:#f5b942;
+      font-weight:900;
+      font-size:clamp(.66rem,1.5vw,.82rem);
+      line-height:1;
+      text-shadow:0 1px 2px rgba(0,0,0,.75);
+      z-index:2;
+    }
+
+    .board-coords.top{
+      left:0;
+      right:0;
+      top:-18px;
+      display:grid;
+      grid-template-columns:repeat(8,1fr);
+      gap:2px;
+      padding:0 var(--coord-board-pad);
+    }
+
+    .board-coords.left{
+      top:0;
+      bottom:0;
+      left:-20px;
+      width:16px;
+      display:grid;
+      grid-template-rows:repeat(8,1fr);
+      gap:2px;
+      padding:var(--coord-board-pad) 0;
+    }
+
+    .coord-label{
+      display:grid;
+      place-items:center;
+      min-width:0;
+      min-height:0;
+    }
+
+    #board{
+      width:100%;
+      aspect-ratio:1;
+      display:grid;
+      grid-template-columns:repeat(8,1fr);
+      gap:2px;
+      padding:5px;
+      background:var(--grid);
+      border-radius:14px;
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.05), 0 14px 36px rgba(0,0,0,.25);
+      touch-action:manipulation;
+    }
+
+    .cell{
+      position:relative;
+      background:var(--board);
+      border-radius:3px;
+      border:0;
+      padding:0;
+      min-width:0;
+    }
+    .cell:hover{background:var(--board-hover)}
+    .cell.valid::after{
+      content:"";
+      position:absolute;
+      width:18%;
+      height:18%;
+      left:41%;
+      top:41%;
+      border-radius:50%;
+      background:rgba(255,255,255,.42);
+      box-shadow:0 0 0 1px rgba(0,0,0,.15);
+    }
+
+    .piece{
+      position:absolute;
+      inset:8%;
+      border-radius:50%;
+      transform:scale(.98);
+      box-shadow:inset 0 0 12px rgba(255,255,255,.14), 0 4px 8px rgba(0,0,0,.35);
+      animation:pop .16s ease;
+    }
+    @keyframes pop{from{transform:scale(.72)}to{transform:scale(.98)}}
+    .piece.black{background:radial-gradient(circle at 35% 30%, #3c3c3c, #090909 58%)}
+    .piece.white{background:radial-gradient(circle at 35% 30%, #fff, #e7e7e7 62%)}
+
+    .card{
+      background:var(--panel-2);
+      border-radius:16px;
+      padding:15px;
+    }
+    .card h2,.card h3{margin:0 0 10px}
+    .card p{color:var(--muted); line-height:1.5; margin:0}
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+    }
+    .stat{
+      text-align:center;
+      background:#0e1728;
+      border-radius:12px;
+      padding:12px 7px;
+    }
+    .stat strong{display:block; font-size:1.45rem}
+    .stat span{font-size:.75rem; color:var(--muted)}
+
+    .tips{
+      display:grid;
+      gap:9px;
+      padding-left:18px;
+      color:#d9e5f4;
+      margin:0;
+    }
+    .tips li::marker{color:var(--accent)}
+
+    .history{
+      display:grid;
+      gap:8px;
+      max-height:250px;
+      overflow:auto;
+    }
+    .history-item{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      background:#0e1728;
+      padding:9px 10px;
+      border-radius:10px;
+      font-size:.9rem;
+    }
+    .history-item span:last-child{color:var(--muted)}
+
+    .footer-note{
+      color:var(--muted);
+      text-align:center;
+      font-size:.82rem;
+      margin-top:20px;
+    }
+
+    dialog{
+      width:min(640px,92vw);
+      border:1px solid #334155;
+      border-radius:18px;
+      padding:0;
+      background:#101827;
+      color:var(--text);
+      box-shadow:var(--shadow);
+    }
+    dialog::backdrop{background:rgba(0,0,0,.72)}
+    .modal-body{padding:22px}
+    .modal-body h2{margin-top:0}
+    .modal-body p,.modal-body li{color:#c7d4e6; line-height:1.55}
+    .modal-actions{display:flex;justify-content:flex-end;margin-top:18px}
+
+    .winner-banner{
+      border:1px solid rgba(245,158,11,.4);
+      background:rgba(245,158,11,.08);
+      color:#fde68a;
+      border-radius:12px;
+      padding:10px 12px;
+      text-align:center;
+      font-weight:800;
+      margin-bottom:12px;
+    }
+
+
+
+
+    .lang-switch{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:4px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:999px;
+      background:rgba(8,15,27,.56);
+      backdrop-filter:blur(14px);
+    }
+    .lang-btn{
+      border:0;
+      min-width:42px;
+      padding:7px 10px;
+      border-radius:999px;
+      background:transparent;
+      color:#9fb0c7;
+      font-weight:900;
+      font-size:.76rem;
+      letter-spacing:.04em;
+      cursor:pointer;
+      transition:.18s ease;
+    }
+    .lang-btn:hover{color:#fff}
+    .lang-btn.active{
+      background:#22c55e;
+      color:#06130b;
+      box-shadow:0 4px 14px rgba(34,197,94,.25);
+    }
+
+
+    .online-panel{
+      display:none;
+      margin:0 0 14px;
+      padding:14px;
+      border:1px solid rgba(34,197,94,.22);
+      border-radius:14px;
+      background:linear-gradient(180deg,rgba(34,197,94,.07),rgba(15,23,42,.35));
+    }
+    .online-panel.active{display:block}
+    .online-row{
+      display:grid;
+      grid-template-columns:minmax(150px,1fr) auto auto;
+      gap:8px;
+      align-items:end;
+    }
+    .online-input{
+      width:100%;
+      min-width:0;
+      padding:10px 12px;
+      border:1px solid #34435d;
+      border-radius:10px;
+      background:#0e1728;
+      color:var(--text);
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      font-weight:900;
+      outline:none;
+    }
+    .online-input:focus{
+      border-color:#22c55e;
+      box-shadow:0 0 0 3px rgba(34,197,94,.10);
+    }
+    .online-info{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      color:#b9c6d8;
+      font-size:.84rem;
+    }
+    .online-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .online-warning{
+      margin-top:10px;
+      padding:9px 10px;
+      border-radius:10px;
+      background:rgba(245,158,11,.08);
+      border:1px solid rgba(245,158,11,.22);
+      color:#fcd98b;
+      font-size:.8rem;
+      line-height:1.4;
+    }
+    @media(max-width:620px){
+      .online-row{grid-template-columns:1fr 1fr}
+      .online-row .field{grid-column:1/-1}
+      .online-row .btn{width:100%}
+    }
+
+    /* ===== Portal de entrada / apresentação ===== */
+    .landing{
+      min-height:100svh;
+      position:relative;
+      overflow:hidden;
+      isolation:isolate;
+      background:
+        radial-gradient(circle at 18% 20%, rgba(34,197,94,.20), transparent 26rem),
+        radial-gradient(circle at 82% 28%, rgba(59,130,246,.13), transparent 24rem),
+        linear-gradient(145deg, #060b14 0%, #0a1322 44%, #071811 100%);
+    }
+
+    .landing::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      z-index:-2;
+      opacity:.26;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size:42px 42px;
+      mask-image:linear-gradient(to bottom, #000 0%, transparent 78%);
+    }
+
+    .landing::after{
+      content:"";
+      position:absolute;
+      width:52vw;
+      height:52vw;
+      min-width:560px;
+      min-height:clamp(360px, 44vh, 520px);
+      right:-20vw;
+      bottom:-34vw;
+      border-radius:50%;
+      background:#22c55e;
+      filter:blur(110px);
+      opacity:.09;
+      z-index:-1;
+    }
+
+    .landing-shell{
+      width:min(1180px, 92vw);
+      min-height:100svh;
+      margin:0 auto;
+      padding:22px 0 26px;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .landing-nav{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+    }
+
+    .landing-brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-weight:900;
+      letter-spacing:.02em;
+    }
+
+    .landing-brand .logo{
+      width:42px;
+      height:42px;
+      box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 10px 40px rgba(0,0,0,.35);
+    }
+
+    .landing-brand small{
+      display:block;
+      margin-top:2px;
+      color:#7f8da3;
+      font-size:.68rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+    }
+
+    .nav-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:9px 12px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:999px;
+      color:#b9c6d8;
+      background:rgba(8,15,27,.56);
+      backdrop-filter:blur(14px);
+      font-size:.78rem;
+      font-weight:800;
+    }
+
+    .nav-badge::before{
+      content:"";
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#22c55e;
+      box-shadow:0 0 14px #22c55e;
+    }
+
+    .landing-main{
+      flex:1;
+      display:grid;
+      grid-template-columns:minmax(0, .93fr) minmax(420px, 1.07fr);
+      gap:clamp(28px,4.5vw,68px);
+      align-items:center;
+      padding:28px 0 22px;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      margin-bottom:18px;
+      color:#7ee7a4;
+      font-size:.78rem;
+      font-weight:900;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+    }
+
+    .eyebrow::before{
+      content:"";
+      width:34px;
+      height:2px;
+      background:linear-gradient(90deg,#22c55e,transparent);
+      box-shadow:0 0 12px rgba(34,197,94,.6);
+    }
+
+    .landing-copy h1{
+      max-width:720px;
+      font-size:clamp(2.7rem, 5.9vw, 5.6rem);
+      line-height:.88;
+      letter-spacing:-.065em;
+      text-transform:uppercase;
+      text-wrap:balance;
+    }
+
+    .landing-copy h1 span{
+      display:block;
+      color:transparent;
+      -webkit-text-stroke:1px rgba(244,250,247,.52);
+      text-shadow:0 0 38px rgba(34,197,94,.08);
+    }
+
+    .landing-lead{
+      max-width:580px;
+      margin:18px 0 0;
+      color:#a9b5c8;
+      font-size:clamp(.98rem, 1.2vw, 1.08rem);
+      line-height:1.55;
+    }
+
+    .landing-actions{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:24px;
+    }
+
+    .enter-arena{
+      position:relative;
+      overflow:hidden;
+      border:0;
+      border-radius:15px;
+      padding:15px 22px;
+      color:#06130b;
+      background:linear-gradient(135deg,#48e47f,#22c55e);
+      box-shadow:0 16px 46px rgba(34,197,94,.23), inset 0 1px rgba(255,255,255,.5);
+      font-weight:950;
+      letter-spacing:.02em;
+      transition:transform .2s ease, box-shadow .2s ease;
+    }
+
+    .enter-arena::after{
+      content:"→";
+      display:inline-block;
+      margin-left:12px;
+      transition:transform .2s ease;
+    }
+
+    .enter-arena:hover{
+      transform:translateY(-2px) scale(1.01);
+      box-shadow:0 20px 54px rgba(34,197,94,.32), inset 0 1px rgba(255,255,255,.55);
+    }
+
+    .enter-arena:hover::after{transform:translateX(4px)}
+
+    .no-login{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#76859a;
+      font-size:.82rem;
+      font-weight:700;
+    }
+
+    .no-login svg{width:16px;height:16px;opacity:.8}
+
+    .feature-row{
+      display:flex;
+      gap:22px;
+      flex-wrap:wrap;
+      margin-top:24px;
+      color:#8c9aae;
+      font-size:.78rem;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.07em;
+    }
+
+    .feature-row span{display:inline-flex;align-items:center;gap:8px}
+    .feature-row span::before{content:"";width:5px;height:5px;border-radius:50%;background:#22c55e}
+
+    .arena-visual{
+      position:relative;
+      min-height:clamp(360px, 44vh, 520px);
+      display:grid;
+      place-items:center;
+      perspective:1050px;
+    }
+
+    .visual-glow{
+      position:absolute;
+      width:72%;
+      aspect-ratio:1;
+      border-radius:50%;
+      background:rgba(34,197,94,.16);
+      filter:blur(90px);
+      transform:translateY(12%);
+      pointer-events:none;
+    }
+
+    .showcase-board{
+      width:min(480px, 42vw, 54vh, 86vw);
+      aspect-ratio:1;
+      padding:12px;
+      display:grid;
+      grid-template-columns:repeat(8,1fr);
+      gap:5px;
+      position:relative;
+      z-index:2;
+      transform:rotateX(58deg) rotateZ(-27deg) translateZ(14px);
+      transform-style:preserve-3d;
+      background:#082817;
+      border:1px solid rgba(118,255,165,.20);
+      border-radius:24px;
+      box-shadow:
+        0 70px 100px rgba(0,0,0,.50),
+        0 0 0 1px rgba(255,255,255,.035),
+        0 0 80px rgba(34,197,94,.12) inset;
+    }
+
+    .showcase-cell{
+      position:relative;
+      border-radius:6px;
+      background:
+        linear-gradient(145deg,rgba(255,255,255,.055),transparent 58%),
+        #0f6b3a;
+      box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);
+    }
+
+    .showcase-disc{
+      position:absolute;
+      inset:10%;
+      border-radius:50%;
+      transform:translateZ(17px);
+      box-shadow:0 10px 14px rgba(0,0,0,.38), inset 0 2px 5px rgba(255,255,255,.18);
+    }
+
+    .showcase-disc.black{background:radial-gradient(circle at 32% 28%,#555,#0b0b0c 52%,#020303 80%)}
+    .showcase-disc.white{background:radial-gradient(circle at 32% 28%,#fff,#dce2e7 58%,#aeb7bf 100%)}
+
+    .floating-disc{
+      position:absolute;
+      z-index:4;
+      width:clamp(76px,10vw,120px);
+      aspect-ratio:1;
+      border-radius:50%;
+      animation:floatDisc 5.8s ease-in-out infinite;
+      box-shadow:0 28px 46px rgba(0,0,0,.40), inset 0 3px 8px rgba(255,255,255,.18);
+    }
+
+    .floating-disc.one{
+      right:1%;
+      top:9%;
+      background:radial-gradient(circle at 32% 28%,#fff,#dfe5e9 60%,#a7afb7 100%);
+      animation-delay:-1.8s;
+    }
+
+    .floating-disc.two{
+      left:2%;
+      bottom:8%;
+      width:clamp(62px,8vw,98px);
+      background:radial-gradient(circle at 32% 28%,#555,#0a0a0b 55%,#020303 100%);
+      animation-delay:-3.6s;
+    }
+
+    .match-card{
+      position:absolute;
+      right:0;
+      bottom:1%;
+      z-index:5;
+      width:min(280px,56%);
+      padding:15px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      background:rgba(10,18,31,.78);
+      backdrop-filter:blur(16px);
+      box-shadow:0 18px 48px rgba(0,0,0,.38);
+    }
+
+    .match-card small{color:#718096;text-transform:uppercase;letter-spacing:.12em;font-weight:900}
+    .match-score{display:flex;align-items:end;justify-content:space-between;margin-top:10px;gap:12px}
+    .match-score strong{font-size:1.8rem;letter-spacing:-.04em}
+    .match-score span{color:#22c55e;font-size:.76rem;font-weight:900}
+
+    .landing-footer{
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      color:#59677c;
+      font-size:.74rem;
+      font-weight:700;
+    }
+
+    .landing.exiting{animation:portalOut .34s ease forwards}
+    #gameApp{animation:arenaIn .42s ease both}
+    #gameApp[hidden]{display:none !important}
+
+    @keyframes floatDisc{
+      0%,100%{transform:translate3d(0,0,0) rotate(-8deg)}
+      50%{transform:translate3d(0,-16px,0) rotate(5deg)}
+    }
+    @keyframes portalOut{to{opacity:0;transform:scale(1.015);filter:blur(5px)}}
+    @keyframes arenaIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+
+    @media (min-width:901px) and (max-height:820px){
+      .landing-shell{padding:16px 0 18px}
+      .landing-main{padding:18px 0 10px;gap:26px}
+      .landing-copy h1{font-size:clamp(2.45rem,5vw,4.8rem)}
+      .landing-lead{margin-top:14px;font-size:.97rem;line-height:1.45}
+      .landing-actions{margin-top:18px}
+      .feature-row{margin-top:18px;font-size:.72rem;gap:14px 18px}
+      .arena-visual{min-height:clamp(320px,40vh,430px)}
+      .showcase-board{width:min(410px,36vw,48vh)}
+      .floating-disc.one{top:4%}
+      .floating-disc.two{bottom:4%}
+      .match-card{padding:12px;right:2%;bottom:0}
+      .match-score strong{font-size:1.45rem}
+      .landing-footer{font-size:.68rem}
+    }
+
+    @media (max-width:900px){
+      .landing-main{grid-template-columns:1fr;gap:14px;padding-top:48px}
+      .landing-copy{text-align:center}
+      .landing-copy h1,.landing-lead{margin-left:auto;margin-right:auto}
+      .landing-actions,.feature-row{justify-content:center}
+      .eyebrow{justify-content:center}
+      .arena-visual{min-height:460px;margin-top:-18px}
+      .showcase-board{width:min(450px,78vw)}
+      .floating-disc.one{right:8%;top:3%}
+      .floating-disc.two{left:9%;bottom:8%}
+      .match-card{right:8%;bottom:3%}
+    }
+
+    @media (max-width:620px){
+      .landing-shell{width:min(92vw, 520px);padding-top:20px}
+      .nav-badge{display:none}
+      .landing-main{padding:44px 0 26px}
+      .landing-copy h1{font-size:clamp(3.15rem,17vw,5.2rem)}
+      .landing-lead{font-size:.98rem}
+      .landing-actions{display:grid;width:100%}
+      .enter-arena{width:100%;padding:16px 20px}
+      .no-login{justify-content:center}
+      .feature-row{gap:11px 16px;margin-top:24px;font-size:.68rem}
+      .arena-visual{min-height:390px;margin-top:-8px}
+      .showcase-board{width:84vw;padding:8px;gap:3px;border-radius:18px}
+      .showcase-cell{border-radius:4px}
+      .match-card{right:0;bottom:3%;width:48%;padding:12px}
+      .match-score strong{font-size:1.35rem}
+      .floating-disc.one{right:0;top:6%}
+      .floating-disc.two{left:0;bottom:8%}
+      .landing-footer{justify-content:center;text-align:center}
+      .landing-footer span:last-child{display:none}
+    }
+
+    @media (prefers-reduced-motion:reduce){
+      *,*::before,*::after{scroll-behavior:auto !important;animation-duration:.01ms !important;animation-iteration-count:1 !important}
+    }
+
+
+    /* Ajuste automático da Arena para telas de computador */
+    @media (min-width:851px){
+      #gameApp.shell{
+        width:min(1240px,96vw);
+        padding:12px 0 18px;
+      }
+      #gameApp header{margin-bottom:12px}
+      #gameApp .logo{width:40px;height:40px;border-width:2px}
+      #gameApp h1{font-size:clamp(1.45rem,2vw,1.9rem)}
+      #gameApp .subtitle{font-size:.82rem}
+      #gameApp .top-actions .btn{padding:8px 11px;border-radius:10px}
+      #gameApp .layout{
+        grid-template-columns:minmax(0,1.58fr) minmax(250px,.68fr);
+        gap:14px;
+      }
+      #gameApp .game-panel,
+      #gameApp .side-panel{padding:12px}
+      #gameApp .side-panel{gap:10px}
+      #gameApp .toolbar{gap:8px;margin-bottom:10px}
+      #gameApp .field{gap:4px}
+      #gameApp .field label{font-size:.72rem}
+      #gameApp select{padding:8px 10px}
+      #gameApp .btn{padding:8px 11px}
+      #gameApp .scorebar{gap:8px;margin-bottom:8px}
+      #gameApp .score{padding:8px 10px}
+      #gameApp .disc-mini{width:22px;height:22px}
+      #gameApp .score strong{font-size:1.15rem}
+      #gameApp .status{min-height:22px;margin:4px 0 8px;font-size:.92rem}
+      #gameApp .board-wrap{
+        width:min(100%,54vh,540px);
+        max-width:none;
+        --coord-board-pad:4px;
+      }
+      #gameApp #board{padding:4px;border-radius:12px}
+      #gameApp .card{padding:12px;border-radius:14px}
+      #gameApp .card h3{font-size:1rem;margin-bottom:8px}
+      #gameApp .stats{gap:6px}
+      #gameApp .stat{padding:9px 6px}
+      #gameApp .stat strong{font-size:1.2rem}
+      #gameApp .tips{gap:6px;padding-left:16px;font-size:.85rem}
+      #gameApp .history{max-height:130px;gap:6px}
+      #gameApp .history-item{padding:7px 8px;font-size:.82rem}
+      #gameApp .footer-note{margin-top:10px;font-size:.72rem}
+      #gameApp .game-panel > div:last-child{margin-top:10px !important}
+    }
+
+    @media (min-width:851px) and (max-height:680px){
+      #gameApp.shell{padding-top:8px}
+      #gameApp header{margin-bottom:8px}
+      #gameApp .subtitle{display:none}
+      #gameApp .board-wrap{width:min(100%,48vh,470px)}
+      #gameApp .card{padding:10px}
+      #gameApp .tips{font-size:.8rem;gap:4px}
+      #gameApp .history{max-height:90px}
+      #gameApp .footer-note{display:none}
+    }
+
+    @media (max-width:850px){
+      .layout{grid-template-columns:1fr}
+      .side-panel{grid-template-columns:1fr 1fr}
+      .card.history-card{grid-column:1/-1}
+    }
+
+    @media (max-width:620px){
+      header{align-items:flex-start; flex-direction:column}
+      .top-actions{width:100%; justify-content:flex-start}
+      .toolbar{grid-template-columns:1fr}
+      .toolbar .btn{width:100%}
+      .side-panel{grid-template-columns:1fr}
+      .scorebar{grid-template-columns:1fr auto 1fr}
+      .score{padding:10px}
+      .score span{display:none}
+      .game-panel{padding:12px}
+    }
+  </style>
+</head>
+<body>
+
+  <section class="landing" id="landing" aria-label="Apresentação Othello Arena">
+    <div class="landing-shell">
+      <nav class="landing-nav" aria-label="Navegação de apresentação">
+        <div class="landing-brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div>OTHELLO ARENA<small id="brandSmall">Strategy board game</small></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+          <div class="lang-switch" aria-label="Idioma / Language">
+            <button class="lang-btn active" type="button" data-lang="pt" aria-pressed="true">PT</button>
+            <button class="lang-btn" type="button" data-lang="en" aria-pressed="false">EN</button>
+          </div>
+          <div class="nav-badge" id="navBadge">Arena aberta • sem login</div>
+        </div>
+      </nav>
+
+      <main class="landing-main">
+        <div class="landing-copy">
+          <div class="eyebrow" id="eyebrow">Pense antes de virar</div>
+          <h1 id="heroTitle">Domine o <span>tabuleiro.</span></h1>
+          <p class="landing-lead" id="heroLead">O clássico duelo de estratégia em uma arena rápida e direta. Cerque, vire, conquiste as quinas e controle o jogo — sozinho contra a CPU ou com outro jogador.</p>
+
+          <div class="landing-actions">
+            <button class="enter-arena" id="enterArenaBtn">Entrar na Arena</button>
+            <div class="no-login" aria-label="Acesso sem cadastro">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a5 5 0 0 0-5 5v2H5v11h14V10h-2V8a5 5 0 0 0-5-5Zm-3 7V8a3 3 0 1 1 6 0v2"/></svg>
+              <span id="noLoginText">Acesso imediato, sem cadastro</span>
+            </div>
+          </div>
+
+          <div class="feature-row" aria-label="Recursos principais">
+            <span id="featurePlayers">2 jogadores</span>
+            <span id="featureCpu">CPU em 3 níveis</span>
+            <span id="featureHints">Dicas de jogada</span>
+          </div>
+        </div>
+
+        <div class="arena-visual" aria-hidden="true">
+          <div class="visual-glow"></div>
+          <div class="floating-disc one"></div>
+          <div class="floating-disc two"></div>
+          <div class="showcase-board" id="showcaseBoard"></div>
+          <div class="match-card">
+            <small>OTHELLO ARENA</small>
+            <div class="match-score">
+              <strong id="matchStrong">Entre e desafie a CPU</strong>
+              <span id="matchReady">● PRONTO PARA JOGAR</span>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="landing-footer">
+        <span id="landingFooterText">Othello Arena • Estratégia em cada movimento</span>
+        <span>TM &amp; © Othello, Co. and MegaHouse.</span>
+      </footer>
+    </div>
+  </section>
+
+  <div class="shell" id="gameApp" hidden>
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Othello Arena</h1>
+          <div class="subtitle" id="gameSubtitle">O clássico jogo de estratégia, direto no navegador.</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <div class="lang-switch" aria-label="Idioma / Language">
+          <button class="lang-btn active" type="button" data-lang="pt" aria-pressed="true">PT</button>
+          <button class="lang-btn" type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <button class="btn ghost" id="backToPortalBtn">← Portal</button>
+        <button class="btn ghost" id="rulesBtn">Como jogar</button>
+        <button class="btn ghost" id="benefitsBtn">Benefícios</button>
+        <button class="btn ghost" id="clearStatsBtn">Zerar histórico</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="panel game-panel">
+        <div class="toolbar">
+          <div class="field">
+            <label for="mode" id="modeLabel">Modo</label>
+            <select id="mode">
+              <option value="human">2 jogadores</option>
+              <option value="cpu">Contra o computador</option>
+              <option value="online">🌐 Jogar online</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="difficulty" id="difficultyLabel">Dificuldade</label>
+            <select id="difficulty">
+              <option value="easy">Fácil</option>
+              <option value="medium" selected>Médio</option>
+              <option value="hard">Difícil</option>
+            </select>
+          </div>
+
+          <button class="btn primary" id="newGameBtn">Nova partida</button>
+        </div>
+
+        <div class="online-panel" id="onlinePanel">
+          <div class="online-row">
+            <div class="field">
+              <label for="roomCodeInput" id="roomCodeLabel">Código da sala</label>
+              <input class="online-input" id="roomCodeInput" maxlength="6"
+                     autocomplete="off" spellcheck="false" placeholder="A7K9P2" />
+            </div>
+            <button class="btn primary" id="createRoomBtn">Criar sala</button>
+            <button class="btn" id="joinRoomBtn">Entrar</button>
+          </div>
+          <div class="online-info">
+            <div id="onlineStateText">Crie uma sala ou digite um código para entrar.</div>
+            <div class="online-actions">
+              <button class="btn ghost" id="copyRoomBtn" hidden>Copiar código</button>
+              <button class="btn danger" id="leaveRoomBtn" hidden>Sair da sala</button>
+            </div>
+          </div>
+          <div class="online-warning" id="firebaseWarning" hidden></div>
+        </div>
+
+        <div class="scorebar">
+          <div class="score">
+            <div class="disc-mini black"></div>
+            <span id="blackLabel">Pretas</span>
+            <strong id="blackScore">2</strong>
+          </div>
+
+          <div class="vs">×</div>
+
+          <div class="score white-score">
+            <div class="disc-mini white"></div>
+            <span id="whiteLabel">Brancas</span>
+            <strong id="whiteScore">2</strong>
+          </div>
+        </div>
+
+        <div id="winnerBanner"></div>
+        <div id="status" class="status">Vez das Pretas.</div>
+
+        <div class="board-wrap">
+          <div class="board-coords top" aria-hidden="true">
+            <span class="coord-label">A</span><span class="coord-label">B</span>
+            <span class="coord-label">C</span><span class="coord-label">D</span>
+            <span class="coord-label">E</span><span class="coord-label">F</span>
+            <span class="coord-label">G</span><span class="coord-label">H</span>
+          </div>
+          <div class="board-coords left" aria-hidden="true">
+            <span class="coord-label">1</span><span class="coord-label">2</span>
+            <span class="coord-label">3</span><span class="coord-label">4</span>
+            <span class="coord-label">5</span><span class="coord-label">6</span>
+            <span class="coord-label">7</span><span class="coord-label">8</span>
+          </div>
+          <div id="board" aria-label="Tabuleiro de Othello"></div>
+        </div>
+
+        <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:16px;">
+          <button class="btn" id="undoBtn">Desfazer</button>
+          <button class="btn" id="hintBtn">Dica</button>
+        </div>
+      </section>
+
+      <aside class="panel side-panel">
+        <div class="card">
+          <h3 id="progressTitle">Seu progresso</h3>
+          <div class="stats">
+            <div class="stat"><strong id="wins">0</strong><span id="winsLabel">Vitórias</span></div>
+            <div class="stat"><strong id="losses">0</strong><span id="lossesLabel">Derrotas</span></div>
+            <div class="stat"><strong id="draws">0</strong><span id="drawsLabel">Empates</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 id="strategyTitle">Estratégia rápida</h3>
+          <ul class="tips">
+            <li id="tip1">As quinas são permanentes. Priorize-as.</li>
+            <li id="tip2">Evite entregar as casas diagonais às quinas.</li>
+            <li id="tip3">Ter mais peças cedo nem sempre é vantagem.</li>
+            <li id="tip4">Limite as jogadas disponíveis ao adversário.</li>
+          </ul>
+        </div>
+
+        <div class="card history-card">
+          <h3 id="historyTitle">Últimas partidas</h3>
+          <div id="history" class="history">
+            <p style="color:var(--muted)">Nenhuma partida registrada.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer-note"><span id="gameFooterText">Othello Arena • HTML, CSS e JavaScript • pronto para GitHub Pages</span><br>TM &amp; © Othello, Co. and MegaHouse.</div>
+  </div>
+
+  <dialog id="rulesDialog">
+    <div class="modal-body">
+      <h2 id="rulesTitle">Como jogar Othello</h2>
+      <p id="rulesIntro">As Pretas começam. Em cada jogada, coloque uma peça de modo que uma ou mais peças adversárias fiquem entre a peça recém-colocada e outra peça sua, em linha horizontal, vertical ou diagonal.</p>
+      <ol>
+        <li id="rule1">As peças cercadas são viradas para a sua cor.</li>
+        <li id="rule2">Se você não tiver jogada válida, a vez passa automaticamente.</li>
+        <li id="rule3">A partida termina quando nenhum jogador puder jogar.</li>
+        <li id="rule4">Vence quem tiver mais peças no tabuleiro.</li>
+      </ol>
+      <p><strong id="rulesTipLabel">Dica:</strong> <span id="rulesTipText">controlar quinas e mobilidade costuma ser muito mais importante do que simplesmente virar muitas peças no começo.</span></p>
+      <div class="modal-actions">
+        <button class="btn primary" id="closeRulesBtn">Entendi</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="benefitsDialog">
+    <div class="modal-body">
+      <h2 id="benefitsTitle">Benefícios potenciais de jogar Othello</h2>
+      <p id="benefitsIntro">Othello é um jogo de estratégia que pode exercitar habilidades cognitivas e oferecer momentos de lazer e interação social. Os efeitos variam de pessoa para pessoa.</p>
+      <ul class="tips" style="margin-top:14px;">
+        <li id="benefit1"><strong>Atenção e concentração:</strong> acompanhar o tabuleiro exige foco constante e percepção de mudanças.</li>
+        <li id="benefit2"><strong>Planejamento e raciocínio:</strong> antecipar jogadas estimula a tomada de decisões e a resolução de problemas.</li>
+        <li id="benefit3"><strong>Memória de trabalho:</strong> lembrar possibilidades, posições e consequências pode exercitar a retenção de informações por curto prazo.</li>
+        <li id="benefit4"><strong>Flexibilidade mental:</strong> adaptar a estratégia quando o adversário muda o cenário favorece a busca de novas soluções.</li>
+        <li id="benefit5"><strong>Lazer e relaxamento:</strong> uma partida agradável pode ajudar a fazer uma pausa mental e aliviar a tensão do dia.</li>
+        <li id="benefit6"><strong>Interação social:</strong> jogar com outra pessoa pode estimular convivência, comunicação e competição saudável.</li>
+      </ul>
+      <p style="margin-top:14px;"><strong id="benefitsNoteLabel">Importante:</strong> <span id="benefitsNote">esses são benefícios potenciais associados à prática de jogos de estratégia. Othello não substitui atividade física, sono adequado, tratamento médico ou acompanhamento profissional.</span></p>
+      <div class="modal-actions">
+        <button class="btn primary" id="closeBenefitsBtn">Entendi</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    const SIZE = 8;
+    const EMPTY = 0, BLACK = 1, WHITE = 2;
+    const dirs = [
+      [-1,-1],[-1,0],[-1,1],
+      [0,-1],        [0,1],
+      [1,-1], [1,0], [1,1]
+    ];
+
+
+    // ===== Firebase / modo online =====
+    // Substitua os valores COLE_AQUI pelos dados do seu aplicativo Web no Firebase.
+    const firebaseConfig = {
+      apiKey: "AIzaSyBQHohOxsFC4UJmMRegD5FQYkaWyjEjpD0",
+      authDomain: "othello-arena-303fb.firebaseapp.com",
+      databaseURL: "https://othello-arena-303fb-default-rtdb.firebaseio.com",
+      projectId: "othello-arena-303fb",
+      storageBucket: "othello-arena-303fb.firebasestorage.app",
+      messagingSenderId: "562178746053",
+      appId: "1:562178746053:web:ef467f1d480b4ce78432ac"
+    };
+
+    const FIREBASE_CONFIGURED =
+      firebaseConfig.apiKey !== "COLE_AQUI" &&
+      firebaseConfig.databaseURL !== "COLE_AQUI" &&
+      firebaseConfig.projectId !== "COLE_AQUI" &&
+      firebaseConfig.appId !== "COLE_AQUI";
+
+    let firebaseApi=null, firebaseApp=null, firebaseAuth=null, firebaseUser=null;
+
+    async function loadFirebase(){
+      if(!FIREBASE_CONFIGURED) return false;
+      if(firebaseApi && firebaseUser) return true;
+      try{
+        const [appMod,authMod]=await Promise.all([
+          import("https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js"),
+          import("https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js")
+        ]);
+        firebaseApi={...appMod,...authMod};
+        firebaseApp=firebaseApi.initializeApp(firebaseConfig);
+        firebaseAuth=firebaseApi.getAuth(firebaseApp);
+        if(!firebaseAuth.currentUser) await firebaseApi.signInAnonymously(firebaseAuth);
+        firebaseUser=firebaseAuth.currentUser;
+        return !!firebaseUser;
+      }catch(err){
+        console.error("Firebase Auth:",err);
+        return false;
+      }
+    }
+
+
+    const I18N = {
+      pt: {
+        pageDescription:"Jogue Othello no navegador, contra outra pessoa ou contra o computador.",
+        brandSmall:"Strategy board game",
+        navBadge:"Arena aberta • sem login",
+        eyebrow:"Pense antes de virar",
+        heroTitle:'Domine o <span>tabuleiro.</span>',
+        heroLead:"O clássico duelo de estratégia em uma arena rápida e direta. Cerque, vire, conquiste as quinas e controle o jogo — sozinho contra a CPU ou com outro jogador.",
+        enterArena:"Entrar na Arena",
+        noLogin:"Acesso imediato, sem cadastro",
+        featurePlayers:"2 jogadores",
+        featureCpu:"CPU em 3 níveis",
+        featureHints:"Dicas de jogada",
+        matchStrong:"Entre e desafie a CPU",
+        matchReady:"● PRONTO PARA JOGAR",
+        landingFooter:"Othello Arena • Estratégia em cada movimento",
+        gameSubtitle:"O clássico jogo de estratégia, direto no navegador.",
+        backPortal:"← Portal",
+        howToPlay:"Como jogar",
+        benefits:"Benefícios",
+        benefitsTitle:"Benefícios potenciais de jogar Othello",
+        benefitsIntro:"Othello é um jogo de estratégia que pode exercitar habilidades cognitivas e oferecer momentos de lazer e interação social. Os efeitos variam de pessoa para pessoa.",
+        benefit1:"Atenção e concentração: acompanhar o tabuleiro exige foco constante e percepção de mudanças.",
+        benefit2:"Planejamento e raciocínio: antecipar jogadas estimula a tomada de decisões e a resolução de problemas.",
+        benefit3:"Memória de trabalho: lembrar possibilidades, posições e consequências pode exercitar a retenção de informações por curto prazo.",
+        benefit4:"Flexibilidade mental: adaptar a estratégia quando o adversário muda o cenário favorece a busca de novas soluções.",
+        benefit5:"Lazer e relaxamento: uma partida agradável pode ajudar a fazer uma pausa mental e aliviar a tensão do dia.",
+        benefit6:"Interação social: jogar com outra pessoa pode estimular convivência, comunicação e competição saudável.",
+        benefitsNoteLabel:"Importante:",
+        benefitsNote:"esses são benefícios potenciais associados à prática de jogos de estratégia. Othello não substitui atividade física, sono adequado, tratamento médico ou acompanhamento profissional.",
+        clearHistory:"Zerar histórico",
+        modeLabel:"Modo",
+        modeHuman:"2 jogadores",
+        modeCpu:"Contra o computador",
+        modeOnline:"🌐 Jogar online",
+        roomCodeLabel:"Código da sala",
+        createRoom:"Criar sala",
+        joinRoom:"Entrar",
+        copyRoom:"Copiar código",
+        leaveRoom:"Sair da sala",
+        onlineIdle:"Crie uma sala ou digite um código para entrar.",
+        onlineConfigMissing:"O modo online está pronto, mas você precisa colar a configuração do seu projeto Firebase no bloco firebaseConfig.",
+        onlineConnecting:"Conectando…",
+        onlineCreating:"Criando sala…",
+        onlineJoining:"Entrando na sala…",
+        onlineWaiting:"Sala {code} criada. Aguardando o segundo jogador…",
+        onlineYourTurn:"Sua vez — {color}.",
+        onlineOpponentTurn:"Vez do adversário.",
+        onlineOpponentOffline:"O adversário está desconectado. A partida continua quando ele voltar.",
+        onlineRoomNotFound:"Sala não encontrada.",
+        onlineRoomFull:"Esta sala já tem dois jogadores.",
+        onlineInvalidCode:"Digite um código de sala com 6 caracteres.",
+        onlineError:"Não foi possível concluir a operação online.",
+        onlineCopied:"Código {code} copiado.",
+        onlineLeft:"Você saiu da sala.",
+        onlineReconnected:"Reconectado à sala {code}.",
+        onlineBlack:"Pretas",
+        onlineWhite:"Brancas",
+        onlineModeHistory:"Online",
+        onlineNeedOpponent:"Aguardando o segundo jogador.",
+        onlineNotYourTurn:"Aguarde a vez do adversário.",
+        onlineMoveRejected:"A jogada não pôde ser sincronizada. Tente novamente.",
+        difficultyLabel:"Dificuldade",
+        easy:"Fácil",
+        medium:"Médio",
+        hard:"Difícil",
+        newGame:"Nova partida",
+        black:"Pretas",
+        white:"Brancas",
+        undo:"Desfazer",
+        hint:"Dica",
+        progress:"Seu progresso",
+        wins:"Vitórias",
+        losses:"Derrotas",
+        draws:"Empates",
+        strategy:"Estratégia rápida",
+        tip1:"As quinas são permanentes. Priorize-as.",
+        tip2:"Evite entregar as casas diagonais às quinas.",
+        tip3:"Ter mais peças cedo nem sempre é vantagem.",
+        tip4:"Limite as jogadas disponíveis ao adversário.",
+        history:"Últimas partidas",
+        noMatches:"Nenhuma partida registrada.",
+        gameFooter:"Othello Arena • HTML, CSS e JavaScript • pronto para GitHub Pages",
+        rulesTitle:"Como jogar Othello",
+        rulesIntro:"As Pretas começam. Em cada jogada, coloque uma peça de modo que uma ou mais peças adversárias fiquem entre a peça recém-colocada e outra peça sua, em linha horizontal, vertical ou diagonal.",
+        rule1:"As peças cercadas são viradas para a sua cor.",
+        rule2:"Se você não tiver jogada válida, a vez passa automaticamente.",
+        rule3:"A partida termina quando nenhum jogador puder jogar.",
+        rule4:"Vence quem tiver mais peças no tabuleiro.",
+        rulesTipLabel:"Dica:",
+        rulesTipText:"controlar quinas e mobilidade costuma ser muito mais importante do que simplesmente virar muitas peças no começo.",
+        understood:"Entendi",
+        blackName:"Pretas",
+        whiteName:"Brancas",
+        turn:"Vez das {player}.",
+        noMoves:"{player} não têm jogadas válidas. A vez passa.",
+        cpuThinking:"Computador pensando…",
+        blackWin:"Pretas venceram por {black} a {white}.",
+        whiteWin:"Brancas venceram por {white} a {black}.",
+        draw:"Empate em {black} a {white}.",
+        gameOver:"Fim de jogo.",
+        hintMessage:"Dica: considere a casa {square}.",
+        clearConfirm:"Deseja apagar o histórico e as estatísticas?",
+        rowCol:"Linha {row}, coluna {col}",
+        cpuHistory:"CPU {difficulty}",
+        humanHistory:"2 jogadores"
+      },
+      en: {
+        pageDescription:"Play Othello in your browser against another player or the computer.",
+        brandSmall:"Strategy board game",
+        navBadge:"Arena open • no login",
+        eyebrow:"Think before you flip",
+        heroTitle:'Master the <span>board.</span>',
+        heroLead:"The classic strategy duel in a fast, direct arena. Surround, flip, take the corners and control the game — against the CPU or another player.",
+        enterArena:"Enter the Arena",
+        noLogin:"Instant access, no account required",
+        featurePlayers:"2 players",
+        featureCpu:"CPU with 3 levels",
+        featureHints:"Move hints",
+        matchStrong:"Enter and challenge the CPU",
+        matchReady:"● READY TO PLAY",
+        landingFooter:"Othello Arena • Strategy in every move",
+        gameSubtitle:"The classic strategy game, right in your browser.",
+        backPortal:"← Portal",
+        howToPlay:"How to play",
+        benefits:"Benefits",
+        benefitsTitle:"Potential benefits of playing Othello",
+        benefitsIntro:"Othello is a strategy game that can exercise cognitive skills while providing leisure and social interaction. Effects vary from person to person.",
+        benefit1:"Attention and concentration: following the board requires sustained focus and awareness of changes.",
+        benefit2:"Planning and reasoning: anticipating moves exercises decision-making and problem-solving.",
+        benefit3:"Working memory: keeping possibilities, positions and consequences in mind can exercise short-term information retention.",
+        benefit4:"Mental flexibility: adapting your strategy when the opponent changes the position encourages new solutions.",
+        benefit5:"Leisure and relaxation: an enjoyable match can provide a mental break and help ease everyday tension.",
+        benefit6:"Social interaction: playing another person can encourage interaction, communication and healthy competition.",
+        benefitsNoteLabel:"Important:",
+        benefitsNote:"these are potential benefits associated with strategy games. Othello does not replace physical activity, adequate sleep, medical treatment or professional care.",
+        clearHistory:"Clear history",
+        modeLabel:"Mode",
+        modeHuman:"2 players",
+        modeCpu:"Vs. computer",
+        modeOnline:"🌐 Play online",
+        roomCodeLabel:"Room code",
+        createRoom:"Create room",
+        joinRoom:"Join",
+        copyRoom:"Copy code",
+        leaveRoom:"Leave room",
+        onlineIdle:"Create a room or enter a code to join.",
+        onlineConfigMissing:"Online mode is ready, but you need to paste your Firebase project configuration into the firebaseConfig block.",
+        onlineConnecting:"Connecting…",
+        onlineCreating:"Creating room…",
+        onlineJoining:"Joining room…",
+        onlineWaiting:"Room {code} created. Waiting for the second player…",
+        onlineYourTurn:"Your turn — {color}.",
+        onlineOpponentTurn:"Opponent's turn.",
+        onlineOpponentOffline:"Your opponent is offline. The match resumes when they return.",
+        onlineRoomNotFound:"Room not found.",
+        onlineRoomFull:"This room already has two players.",
+        onlineInvalidCode:"Enter a 6-character room code.",
+        onlineError:"The online operation could not be completed.",
+        onlineCopied:"Code {code} copied.",
+        onlineLeft:"You left the room.",
+        onlineReconnected:"Reconnected to room {code}.",
+        onlineBlack:"Black",
+        onlineWhite:"White",
+        onlineModeHistory:"Online",
+        onlineNeedOpponent:"Waiting for the second player.",
+        onlineNotYourTurn:"Wait for your opponent's turn.",
+        onlineMoveRejected:"The move could not be synchronized. Try again.",
+        difficultyLabel:"Difficulty",
+        easy:"Easy",
+        medium:"Medium",
+        hard:"Hard",
+        newGame:"New game",
+        black:"Black",
+        white:"White",
+        undo:"Undo",
+        hint:"Hint",
+        progress:"Your progress",
+        wins:"Wins",
+        losses:"Losses",
+        draws:"Draws",
+        strategy:"Quick strategy",
+        tip1:"Corners are permanent. Prioritize them.",
+        tip2:"Avoid giving away diagonal squares next to corners.",
+        tip3:"Having more discs early is not always an advantage.",
+        tip4:"Limit your opponent's available moves.",
+        history:"Recent matches",
+        noMatches:"No matches recorded yet.",
+        gameFooter:"Othello Arena • HTML, CSS and JavaScript • ready for GitHub Pages",
+        rulesTitle:"How to play Othello",
+        rulesIntro:"Black moves first. On each turn, place a disc so that one or more opponent discs are trapped between the disc you placed and another of your discs, horizontally, vertically, or diagonally.",
+        rule1:"Captured discs are flipped to your color.",
+        rule2:"If you have no valid move, your turn is automatically passed.",
+        rule3:"The game ends when neither player can move.",
+        rule4:"The player with the most discs on the board wins.",
+        rulesTipLabel:"Tip:",
+        rulesTipText:"controlling corners and mobility is usually more important than simply flipping many discs early.",
+        understood:"Got it",
+        blackName:"Black",
+        whiteName:"White",
+        turn:"{player} to move.",
+        noMoves:"{player} have no valid moves. Turn passes.",
+        cpuThinking:"Computer thinking…",
+        blackWin:"Black wins {black} to {white}.",
+        whiteWin:"White wins {white} to {black}.",
+        draw:"Draw: {black} to {white}.",
+        gameOver:"Game over.",
+        hintMessage:"Hint: consider square {square}.",
+        clearConfirm:"Clear match history and statistics?",
+        rowCol:"Row {row}, column {col}",
+        cpuHistory:"CPU {difficulty}",
+        humanHistory:"2 players"
+      }
+    };
+
+    let currentLang = localStorage.getItem("othelloArenaLang") || "pt";
+
+    function t(key, vars={}){
+      let value = I18N[currentLang]?.[key] ?? I18N.pt[key] ?? key;
+      Object.entries(vars).forEach(([name,val])=>{
+        value = value.replaceAll(`{${name}}`, String(val));
+      });
+      return value;
+    }
+
+    function setText(id, value){
+      const el=document.getElementById(id);
+      if(el) el.textContent=value;
+    }
+
+    function applyLanguage(lang){
+      currentLang = I18N[lang] ? lang : "pt";
+      localStorage.setItem("othelloArenaLang", currentLang);
+      document.documentElement.lang = currentLang==="pt" ? "pt-BR" : "en";
+      document.querySelector('meta[name="description"]')?.setAttribute("content", t("pageDescription"));
+
+      setText("brandSmall",t("brandSmall"));
+      setText("navBadge",t("navBadge"));
+      setText("eyebrow",t("eyebrow"));
+      const hero=document.getElementById("heroTitle");
+      if(hero) hero.innerHTML=t("heroTitle");
+      setText("heroLead",t("heroLead"));
+      setText("enterArenaBtn",t("enterArena"));
+      setText("noLoginText",t("noLogin"));
+      setText("featurePlayers",t("featurePlayers"));
+      setText("featureCpu",t("featureCpu"));
+      setText("featureHints",t("featureHints"));
+      setText("matchStrong",t("matchStrong"));
+      setText("matchReady",t("matchReady"));
+      setText("landingFooterText",t("landingFooter"));
+      setText("gameSubtitle",t("gameSubtitle"));
+      setText("backToPortalBtn",t("backPortal"));
+      setText("rulesBtn",t("howToPlay"));
+      setText("benefitsBtn",t("benefits"));
+      setText("clearStatsBtn",t("clearHistory"));
+      setText("modeLabel",t("modeLabel"));
+      setText("difficultyLabel",t("difficultyLabel"));
+      setText("newGameBtn",t("newGame"));
+      setText("blackLabel",t("black"));
+      setText("whiteLabel",t("white"));
+      setText("undoBtn",t("undo"));
+      setText("hintBtn",t("hint"));
+      setText("progressTitle",t("progress"));
+      setText("winsLabel",t("wins"));
+      setText("lossesLabel",t("losses"));
+      setText("drawsLabel",t("draws"));
+      setText("strategyTitle",t("strategy"));
+      setText("tip1",t("tip1")); setText("tip2",t("tip2"));
+      setText("tip3",t("tip3")); setText("tip4",t("tip4"));
+      setText("historyTitle",t("history"));
+      setText("gameFooterText",t("gameFooter"));
+      setText("rulesTitle",t("rulesTitle"));
+      setText("rulesIntro",t("rulesIntro"));
+      setText("rule1",t("rule1")); setText("rule2",t("rule2"));
+      setText("rule3",t("rule3")); setText("rule4",t("rule4"));
+      setText("rulesTipLabel",t("rulesTipLabel"));
+      setText("rulesTipText",t("rulesTipText"));
+      setText("closeRulesBtn",t("understood"));
+      setText("benefitsTitle",t("benefitsTitle"));
+      setText("benefitsIntro",t("benefitsIntro"));
+      setText("benefit1",t("benefit1")); setText("benefit2",t("benefit2"));
+      setText("benefit3",t("benefit3")); setText("benefit4",t("benefit4"));
+      setText("benefit5",t("benefit5")); setText("benefit6",t("benefit6"));
+      setText("benefitsNoteLabel",t("benefitsNoteLabel"));
+      setText("benefitsNote",t("benefitsNote"));
+      setText("closeBenefitsBtn",t("understood"));
+      setText("roomCodeLabel",t("roomCodeLabel"));
+      setText("createRoomBtn",t("createRoom"));
+      setText("joinRoomBtn",t("joinRoom"));
+      setText("copyRoomBtn",t("copyRoom"));
+      setText("leaveRoomBtn",t("leaveRoom"));
+
+      const humanOpt=document.querySelector('#mode option[value="human"]');
+      const cpuOpt=document.querySelector('#mode option[value="cpu"]');
+      const onlineOpt=document.querySelector('#mode option[value="online"]');
+      const easyOpt=document.querySelector('#difficulty option[value="easy"]');
+      const mediumOpt=document.querySelector('#difficulty option[value="medium"]');
+      const hardOpt=document.querySelector('#difficulty option[value="hard"]');
+      if(humanOpt) humanOpt.textContent=t("modeHuman");
+      if(cpuOpt) cpuOpt.textContent=t("modeCpu");
+      if(onlineOpt) onlineOpt.textContent=t("modeOnline");
+      if(easyOpt) easyOpt.textContent=t("easy");
+      if(mediumOpt) mediumOpt.textContent=t("medium");
+      if(hardOpt) hardOpt.textContent=t("hard");
+
+      document.querySelectorAll(".lang-btn").forEach(btn=>{
+        const active=btn.dataset.lang===currentLang;
+        btn.classList.toggle("active",active);
+        btn.setAttribute("aria-pressed",active ? "true":"false");
+      });
+
+      if(gameOver){
+        const {black,white}=scoreBoard();
+        let msg=black>white ? t("blackWin",{black,white}) :
+                white>black ? t("whiteWin",{black,white}) :
+                t("draw",{black,white});
+        winnerBanner.innerHTML=`<div class="winner-banner">${msg}</div>`;
+        statusEl.textContent=t("gameOver");
+      }else if(cpuThinking){
+        statusEl.textContent=t("cpuThinking");
+      }else{
+        statusEl.textContent=t("turn",{player:playerName(currentPlayer)});
+      }
+
+      renderStats();
+      updateOnlineUi();
+      render();
+    }
+
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    const blackScoreEl = document.getElementById("blackScore");
+    const whiteScoreEl = document.getElementById("whiteScore");
+    const modeEl = document.getElementById("mode");
+    const difficultyEl = document.getElementById("difficulty");
+    const newGameBtn = document.getElementById("newGameBtn");
+    const undoBtn = document.getElementById("undoBtn");
+    const hintBtn = document.getElementById("hintBtn");
+    const historyEl = document.getElementById("history");
+    const winsEl = document.getElementById("wins");
+    const lossesEl = document.getElementById("losses");
+    const drawsEl = document.getElementById("draws");
+    const winnerBanner = document.getElementById("winnerBanner");
+    const clearStatsBtn = document.getElementById("clearStatsBtn");
+    const rulesBtn = document.getElementById("rulesBtn");
+    const rulesDialog = document.getElementById("rulesDialog");
+    const closeRulesBtn = document.getElementById("closeRulesBtn");
+    const benefitsBtn = document.getElementById("benefitsBtn");
+    const benefitsDialog = document.getElementById("benefitsDialog");
+    const closeBenefitsBtn = document.getElementById("closeBenefitsBtn");
+    const landingEl = document.getElementById("landing");
+    const gameAppEl = document.getElementById("gameApp");
+    const enterArenaBtn = document.getElementById("enterArenaBtn");
+    const backToPortalBtn = document.getElementById("backToPortalBtn");
+    const showcaseBoard = document.getElementById("showcaseBoard");
+    const onlinePanel = document.getElementById("onlinePanel");
+    const roomCodeInput = document.getElementById("roomCodeInput");
+    const roomCodeLabel = document.getElementById("roomCodeLabel");
+    const createRoomBtn = document.getElementById("createRoomBtn");
+    const joinRoomBtn = document.getElementById("joinRoomBtn");
+    const copyRoomBtn = document.getElementById("copyRoomBtn");
+    const leaveRoomBtn = document.getElementById("leaveRoomBtn");
+    const onlineStateText = document.getElementById("onlineStateText");
+    const firebaseWarning = document.getElementById("firebaseWarning");
+
+    let board = [];
+    let currentPlayer = BLACK;
+    let gameOver = false;
+    let historyStack = [];
+    let hintMove = null;
+    let cpuThinking = false;
+
+    let onlineRoomCode="";
+    let onlinePlayerColor=null;
+    let onlineRoomData=null;
+    let onlineUnsubscribe=null;
+    let onlinePresenceRef=null;
+    let onlineBusy=false;
+    let onlinePollTimer=null;
+    let onlinePollInFlight=false;
+
+    const CORNERS = new Set(["0,0","0,7","7,0","7,7"]);
+    const X_SQUARES = new Set(["1,1","1,6","6,1","6,6"]);
+    const C_SQUARES = new Set(["0,1","1,0","0,6","1,7","6,0","7,1","6,7","7,6"]);
+
+    function freshBoard(){
+      const b = Array.from({length:SIZE},()=>Array(SIZE).fill(EMPTY));
+      b[3][3]=WHITE; b[3][4]=BLACK;
+      b[4][3]=BLACK; b[4][4]=WHITE;
+      return b;
+    }
+
+
+    function normalizeRoomCode(value){
+      return String(value||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
+    }
+
+    function generateRoomCode(){
+      const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code="";
+      for(let i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+      return code;
+    }
+
+    function onlineColorName(color){
+      return color===BLACK ? t("onlineBlack") : t("onlineWhite");
+    }
+
+    function setOnlineMessage(msg){
+      if(onlineStateText) onlineStateText.textContent=msg;
+    }
+
+    function updateOnlineUi(){
+      if(!onlinePanel) return;
+      const active=modeEl.value==="online";
+      onlinePanel.classList.toggle("active",active);
+      difficultyEl.disabled=modeEl.value!=="cpu";
+      newGameBtn.hidden=active;
+
+      if(!active) return;
+
+      firebaseWarning.hidden=FIREBASE_CONFIGURED;
+      firebaseWarning.textContent=FIREBASE_CONFIGURED ? "" : t("onlineConfigMissing");
+
+      const connected=!!onlineRoomCode;
+      copyRoomBtn.hidden=!connected;
+      leaveRoomBtn.hidden=!connected;
+      createRoomBtn.disabled=onlineBusy||connected;
+      joinRoomBtn.disabled=onlineBusy||connected;
+      roomCodeInput.disabled=onlineBusy||connected;
+
+      if(!connected && !onlineBusy){
+        setOnlineMessage(t("onlineIdle"));
+        return;
+      }
+
+      if(onlineRoomData){
+        const ready=!!onlineRoomData.guestUid;
+        const opponentOnline=onlinePlayerColor===BLACK
+          ? !!onlineRoomData.players?.white?.online
+          : !!onlineRoomData.players?.black?.online;
+
+        if(!ready) setOnlineMessage(t("onlineWaiting",{code:onlineRoomCode}));
+        else if(!opponentOnline) setOnlineMessage(t("onlineOpponentOffline"));
+        else if(gameOver) setOnlineMessage(t("gameOver"));
+        else if(currentPlayer===onlinePlayerColor)
+          setOnlineMessage(t("onlineYourTurn",{color:onlineColorName(onlinePlayerColor)}));
+        else setOnlineMessage(t("onlineOpponentTurn"));
+      }
+    }
+
+    async function ensureOnlineReady(){
+      if(!FIREBASE_CONFIGURED){
+        firebaseWarning.hidden=false;
+        firebaseWarning.textContent=t("onlineConfigMissing");
+        return false;
+      }
+      onlineBusy=true;
+      setOnlineMessage(t("onlineConnecting"));
+      updateOnlineUi();
+      const ok=await loadFirebase();
+      onlineBusy=false;
+      updateOnlineUi();
+      if(!ok) setOnlineMessage(t("onlineError"));
+      return ok;
+    }
+
+    async function firebaseIdToken(forceRefresh=false){
+      if(!(await loadFirebase())) throw new Error("auth-not-ready");
+      return await firebaseApi.getIdToken(firebaseUser,forceRefresh);
+    }
+
+    function restRoomUrl(code,token){
+      return `${firebaseConfig.databaseURL}/rooms/${encodeURIComponent(code)}.json?auth=${encodeURIComponent(token)}`;
+    }
+
+    async function restRequest(code,{method="GET",body,forceRefresh=false}={}){
+      let token=await firebaseIdToken(forceRefresh);
+      let response=await fetch(restRoomUrl(code,token),{
+        method,
+        headers:{"Content-Type":"application/json"},
+        body:body===undefined ? undefined : JSON.stringify(body),
+        cache:"no-store"
+      });
+
+      if(response.status===401 && !forceRefresh){
+        token=await firebaseIdToken(true);
+        response=await fetch(restRoomUrl(code,token),{
+          method,
+          headers:{"Content-Type":"application/json"},
+          body:body===undefined ? undefined : JSON.stringify(body),
+          cache:"no-store"
+        });
+      }
+
+      let data=null;
+      const raw=await response.text();
+      if(raw){
+        try{data=JSON.parse(raw);}catch{data=raw;}
+      }
+
+      if(!response.ok){
+        const message=data?.error || `${response.status} ${response.statusText}`;
+        const err=new Error(message);
+        err.status=response.status;
+        err.payload=data;
+        throw err;
+      }
+      return data;
+    }
+
+    function applyOnlineRoom(room){
+      onlineRoomData=room;
+      board=Array.isArray(room.board)?room.board.map(row=>row.slice()):freshBoard();
+      currentPlayer=room.currentPlayer||BLACK;
+      gameOver=!!room.gameOver;
+      cpuThinking=false;
+      hintMove=null;
+
+      const {black,white}=scoreBoard();
+      if(gameOver){
+        const msg=black>white?t("blackWin",{black,white}):
+                  white>black?t("whiteWin",{black,white}):
+                  t("draw",{black,white});
+        winnerBanner.innerHTML=`<div class="winner-banner">${msg}</div>`;
+        statusEl.textContent=t("gameOver");
+        saveOnlineResultOnce(black,white);
+      }else{
+        winnerBanner.innerHTML="";
+        if(!room.guestUid) statusEl.textContent=t("onlineNeedOpponent");
+        else if(currentPlayer===onlinePlayerColor)
+          statusEl.textContent=t("onlineYourTurn",{color:onlineColorName(onlinePlayerColor)});
+        else statusEl.textContent=t("onlineOpponentTurn");
+      }
+
+      updateOnlineUi();
+      render();
+    }
+
+    async function fetchOnlineRoom(code,{silent=false}={}){
+      if(onlinePollInFlight) return onlineRoomData;
+      onlinePollInFlight=true;
+      try{
+        const room=await restRequest(code);
+        if(room===null){
+          if(!silent) setOnlineMessage(t("onlineRoomNotFound"));
+          return null;
+        }
+        applyOnlineRoom(room);
+        return room;
+      }catch(err){
+        console.error("REST room read:",err);
+        if(!silent) setOnlineMessage(t("onlineError"));
+        return null;
+      }finally{
+        onlinePollInFlight=false;
+      }
+    }
+
+    function stopRoomPolling(){
+      if(onlinePollTimer){
+        clearInterval(onlinePollTimer);
+        onlinePollTimer=null;
+      }
+    }
+
+    function subscribeToRoom(code){
+      stopRoomPolling();
+      onlineUnsubscribe=stopRoomPolling;
+      fetchOnlineRoom(code);
+      onlinePollTimer=setInterval(()=>{
+        if(document.visibilityState==="visible" && onlineRoomCode===code){
+          fetchOnlineRoom(code,{silent:true});
+        }
+      },900);
+    }
+
+    async function findFreeRoomCode(){
+      for(let i=0;i<12;i++){
+        const code=generateRoomCode();
+        const room=await restRequest(code);
+        if(room===null) return code;
+      }
+      throw new Error("room-code");
+    }
+
+    async function setPresence(value){
+      if(!onlineRoomCode||!firebaseUser||!onlinePlayerColor) return;
+      try{
+        const room=await restRequest(onlineRoomCode);
+        if(!room) return;
+        const side=onlinePlayerColor===BLACK?"black":"white";
+        room.players=room.players||{};
+        room.players[side]=room.players[side]||{uid:firebaseUser.uid};
+        room.players[side].online=value;
+        room.updatedAt=Date.now();
+        await restRequest(onlineRoomCode,{method:"PUT",body:room});
+        onlineRoomData=room;
+      }catch(err){
+        console.warn("Presence REST:",err);
+      }
+    }
+
+    async function createOnlineRoom(){
+      if(!(await ensureOnlineReady())) return;
+
+      onlineBusy=true;
+      setOnlineMessage(t("onlineCreating"));
+      updateOnlineUi();
+
+      try{
+        const code=await findFreeRoomCode();
+        const now=Date.now();
+        const room={
+          version:1,
+          hostUid:firebaseUser.uid,
+          guestUid:"",
+          status:"waiting",
+          board:freshBoard(),
+          currentPlayer:BLACK,
+          gameOver:false,
+          winner:"",
+          moveNo:0,
+          players:{
+            black:{uid:firebaseUser.uid,online:true},
+            white:{uid:"",online:false}
+          },
+          createdAt:now,
+          updatedAt:now
+        };
+
+        await restRequest(code,{method:"PUT",body:room});
+
+        onlineRoomCode=code;
+        onlinePlayerColor=BLACK;
+        onlineRoomData=room;
+        roomCodeInput.value=code;
+        localStorage.setItem("othelloOnlineRoom",JSON.stringify({code,color:BLACK}));
+        applyOnlineRoom(room);
+        subscribeToRoom(code);
+      }catch(err){
+        console.error("Create room REST:",err);
+        setOnlineMessage(t("onlineError"));
+      }finally{
+        onlineBusy=false;
+        updateOnlineUi();
+      }
+    }
+
+    async function joinOnlineRoom(){
+      const code=normalizeRoomCode(roomCodeInput.value);
+      roomCodeInput.value=code;
+
+      if(code.length!==6){
+        setOnlineMessage(t("onlineInvalidCode"));
+        return;
+      }
+      if(!(await ensureOnlineReady())) return;
+
+      onlineBusy=true;
+      setOnlineMessage(t("onlineJoining"));
+      updateOnlineUi();
+
+      try{
+        let room=await restRequest(code);
+        if(!room){
+          setOnlineMessage(t("onlineRoomNotFound"));
+          return;
+        }
+
+        if(room.hostUid===firebaseUser.uid){
+          onlinePlayerColor=BLACK;
+        }else{
+          if(room.guestUid && room.guestUid!==firebaseUser.uid){
+            setOnlineMessage(t("onlineRoomFull"));
+            return;
+          }
+
+          room.guestUid=firebaseUser.uid;
+          room.players=room.players||{};
+          room.players.white={uid:firebaseUser.uid,online:true};
+          room.status="playing";
+          room.updatedAt=Date.now();
+
+          try{
+            await restRequest(code,{method:"PUT",body:room});
+          }catch(err){
+            // Re-read once in case another player claimed the seat just before us.
+            const fresh=await restRequest(code);
+            if(fresh?.guestUid && fresh.guestUid!==firebaseUser.uid){
+              setOnlineMessage(t("onlineRoomFull"));
+              return;
+            }
+            throw err;
+          }
+          onlinePlayerColor=WHITE;
+        }
+
+        onlineRoomCode=code;
+        onlineRoomData=room;
+        localStorage.setItem("othelloOnlineRoom",JSON.stringify({code,color:onlinePlayerColor}));
+        applyOnlineRoom(room);
+        subscribeToRoom(code);
+      }catch(err){
+        console.error("Join room REST:",err);
+        setOnlineMessage(t("onlineError"));
+      }finally{
+        onlineBusy=false;
+        updateOnlineUi();
+      }
+    }
+
+    async function playOnlineMove(r,c){
+      if(onlineBusy||gameOver||!onlineRoomCode||!firebaseUser) return;
+      if(!onlineRoomData?.guestUid){
+        setOnlineMessage(t("onlineNeedOpponent"));
+        return;
+      }
+      if(currentPlayer!==onlinePlayerColor){
+        setOnlineMessage(t("onlineNotYourTurn"));
+        return;
+      }
+
+      onlineBusy=true;
+      render();
+
+      try{
+        const room=await restRequest(onlineRoomCode);
+        if(!room||room.gameOver||room.status!=="playing") return;
+
+        const player=room.currentPlayer||BLACK;
+        const expectedUid=player===BLACK?room.hostUid:room.guestUid;
+        if(expectedUid!==firebaseUser.uid){
+          setOnlineMessage(t("onlineNotYourTurn"));
+          return;
+        }
+
+        const b=Array.isArray(room.board)?room.board.map(row=>row.slice()):freshBoard();
+        const flips=getFlips(r,c,player,b);
+        if(!flips.length){
+          setOnlineMessage(t("onlineMoveRejected"));
+          return;
+        }
+
+        b[r][c]=player;
+        for(const [rr,cc] of flips) b[rr][cc]=player;
+
+        let next=opponent(player);
+        const nextMoves=getValidMoves(next,b);
+        const sameMoves=getValidMoves(player,b);
+        let over=false;
+
+        if(!nextMoves.length){
+          if(!sameMoves.length) over=true;
+          else next=player;
+        }
+
+        room.board=b;
+        room.currentPlayer=next;
+        room.gameOver=over;
+        room.status=over?"finished":"playing";
+        room.moveNo=(room.moveNo||0)+1;
+        room.updatedAt=Date.now();
+
+        if(over){
+          const sc=scoreBoard(b);
+          room.winner=sc.black>sc.white?"black":sc.white>sc.black?"white":"draw";
+        }
+
+        await restRequest(onlineRoomCode,{method:"PUT",body:room});
+        applyOnlineRoom(room);
+      }catch(err){
+        console.error("Online move REST:",err);
+        setOnlineMessage(t("onlineMoveRejected"));
+      }finally{
+        onlineBusy=false;
+        updateOnlineUi();
+        render();
+      }
+    }
+
+    async function leaveOnlineRoom(showMessage=true){
+      const code=onlineRoomCode;
+      const color=onlinePlayerColor;
+
+      stopRoomPolling();
+      onlineUnsubscribe=null;
+
+      try{
+        if(code && color && firebaseUser){
+          const room=await restRequest(code);
+          if(room){
+            const side=color===BLACK?"black":"white";
+            room.players=room.players||{};
+            room.players[side]=room.players[side]||{uid:firebaseUser.uid};
+            room.players[side].online=false;
+            room.updatedAt=Date.now();
+            await restRequest(code,{method:"PUT",body:room});
+          }
+        }
+      }catch(err){
+        console.warn("Leave room REST:",err);
+      }
+
+      onlineRoomCode="";
+      onlinePlayerColor=null;
+      onlineRoomData=null;
+      onlinePresenceRef=null;
+      localStorage.removeItem("othelloOnlineRoom");
+      roomCodeInput.value="";
+      roomCodeInput.disabled=false;
+      gameOver=false;
+      winnerBanner.innerHTML="";
+      if(showMessage) setOnlineMessage(t("onlineLeft"));
+      updateOnlineUi();
+    }
+
+    async function reconnectOnlineRoom(){
+      if(!FIREBASE_CONFIGURED) return;
+
+      let saved=null;
+      try{saved=JSON.parse(localStorage.getItem("othelloOnlineRoom"));}catch{}
+      if(!saved?.code) return;
+      if(!(await loadFirebase())) return;
+
+      try{
+        const room=await restRequest(saved.code);
+        if(!room){
+          localStorage.removeItem("othelloOnlineRoom");
+          return;
+        }
+
+        let color=null;
+        if(room.hostUid===firebaseUser.uid) color=BLACK;
+        else if(room.guestUid===firebaseUser.uid) color=WHITE;
+        else{
+          localStorage.removeItem("othelloOnlineRoom");
+          return;
+        }
+
+        onlineRoomCode=saved.code;
+        onlinePlayerColor=color;
+        onlineRoomData=room;
+        roomCodeInput.value=saved.code;
+        modeEl.value="online";
+        applyOnlineRoom(room);
+        subscribeToRoom(saved.code);
+        await setPresence(true);
+        setOnlineMessage(t("onlineReconnected",{code:saved.code}));
+        updateOnlineUi();
+      }catch(err){
+        console.warn("Reconnect REST:",err);
+      }
+    }
+
+    function saveOnlineResultOnce(black,white){
+      if(!onlineRoomCode||!onlinePlayerColor) return;
+      const marker=`othelloOnlineSaved_${onlineRoomCode}`;
+      if(localStorage.getItem(marker)) return;
+      localStorage.setItem(marker,"1");
+
+      const data=loadData();
+      const mine=onlinePlayerColor===BLACK?black:white;
+      const theirs=onlinePlayerColor===BLACK?white:black;
+      if(mine>theirs) data.wins++;
+      else if(mine<theirs) data.losses++;
+      else data.draws++;
+
+      data.history.unshift({
+        date:new Date().toLocaleDateString(currentLang==="pt"?"pt-BR":"en-US"),
+        modeKey:"online",
+        score:`${black} × ${white}`
+      });
+      data.history=data.history.slice(0,10);
+      localStorage.setItem("othelloArenaData",JSON.stringify(data));
+      renderStats();
+    }
+
+    function cloneBoard(b){ return b.map(row=>row.slice()); }
+    function inside(r,c){ return r>=0 && r<SIZE && c>=0 && c<SIZE; }
+    function opponent(p){ return p===BLACK ? WHITE : BLACK; }
+    function playerName(p){ return p===BLACK ? t("blackName") : t("whiteName"); }
+
+    function getFlips(r,c,player,b=board){
+      if (!inside(r,c) || b[r][c]!==EMPTY) return [];
+      const opp = opponent(player);
+      const flips = [];
+      for (const [dr,dc] of dirs){
+        let rr=r+dr, cc=c+dc;
+        const line=[];
+        while(inside(rr,cc) && b[rr][cc]===opp){
+          line.push([rr,cc]);
+          rr+=dr; cc+=dc;
+        }
+        if(line.length && inside(rr,cc) && b[rr][cc]===player){
+          flips.push(...line);
+        }
+      }
+      return flips;
+    }
+
+    function getValidMoves(player,b=board){
+      const moves=[];
+      for(let r=0;r<SIZE;r++){
+        for(let c=0;c<SIZE;c++){
+          const flips=getFlips(r,c,player,b);
+          if(flips.length) moves.push({r,c,flips});
+        }
+      }
+      return moves;
+    }
+
+    function applyMove(b,move,player){
+      const nb=cloneBoard(b);
+      nb[move.r][move.c]=player;
+      for(const [r,c] of move.flips) nb[r][c]=player;
+      return nb;
+    }
+
+    function snapshot(){
+      historyStack.push({
+        board:cloneBoard(board),
+        currentPlayer,
+        gameOver
+      });
+      if(historyStack.length>80) historyStack.shift();
+    }
+
+    function playMove(r,c,fromCPU=false){
+      if(modeEl.value==="online"){
+        playOnlineMove(r,c);
+        return;
+      }
+      if(gameOver || cpuThinking && !fromCPU) return;
+      if(modeEl.value==="cpu" && currentPlayer===WHITE && !fromCPU) return;
+
+      const flips=getFlips(r,c,currentPlayer);
+      if(!flips.length) return;
+
+      snapshot();
+      board[r][c]=currentPlayer;
+      for(const [rr,cc] of flips) board[rr][cc]=currentPlayer;
+      hintMove=null;
+
+      currentPlayer=opponent(currentPlayer);
+      advanceTurn();
+    }
+
+    function advanceTurn(){
+      let moves=getValidMoves(currentPlayer);
+
+      if(!moves.length){
+        const skipped=playerName(currentPlayer);
+        currentPlayer=opponent(currentPlayer);
+        const otherMoves=getValidMoves(currentPlayer);
+
+        if(!otherMoves.length){
+          finishGame();
+          return;
+        }
+        statusEl.textContent=t("noMoves",{player:skipped});
+      }else{
+        statusEl.textContent=t("turn",{player:playerName(currentPlayer)});
+      }
+
+      render();
+
+      if(modeEl.value==="cpu" && currentPlayer===WHITE && !gameOver){
+        cpuTurn();
+      }
+    }
+
+    function scoreBoard(b=board){
+      let black=0, white=0;
+      for(const row of b){
+        for(const v of row){
+          if(v===BLACK) black++;
+          else if(v===WHITE) white++;
+        }
+      }
+      return {black,white};
+    }
+
+    function positionWeight(r,c){
+      const key=`${r},${c}`;
+      if(CORNERS.has(key)) return 120;
+      if(X_SQUARES.has(key)) return -45;
+      if(C_SQUARES.has(key)) return -25;
+      if(r===0||r===7||c===0||c===7) return 18;
+      return 2;
+    }
+
+    function evaluateMove(move,player,b){
+      const next=applyMove(b,move,player);
+      const opp=opponent(player);
+      let score=positionWeight(move.r,move.c);
+      score += move.flips.length * 2.2;
+      score -= getValidMoves(opp,next).length * 4.5;
+      score += getValidMoves(player,next).length * 1.4;
+      return score;
+    }
+
+    function minimax(b,player,depth,maximizingFor,alpha,beta){
+      const moves=getValidMoves(player,b);
+      if(depth===0 || !moves.length){
+        const s=scoreBoard(b);
+        let val=(maximizingFor===WHITE ? s.white-s.black : s.black-s.white);
+        val += (getValidMoves(maximizingFor,b).length - getValidMoves(opponent(maximizingFor),b).length)*3;
+        return val;
+      }
+
+      const isMax = player===maximizingFor;
+      let best = isMax ? -Infinity : Infinity;
+
+      for(const move of moves){
+        const nb=applyMove(b,move,player);
+        const pos=positionWeight(move.r,move.c);
+        const val=minimax(nb,opponent(player),depth-1,maximizingFor,alpha,beta) + (isMax ? pos : -pos);
+
+        if(isMax){
+          best=Math.max(best,val);
+          alpha=Math.max(alpha,best);
+        }else{
+          best=Math.min(best,val);
+          beta=Math.min(beta,best);
+        }
+        if(beta<=alpha) break;
+      }
+      return best;
+    }
+
+    function chooseCpuMove(){
+      const moves=getValidMoves(WHITE);
+      if(!moves.length) return null;
+      const diff=difficultyEl.value;
+
+      if(diff==="easy"){
+        return moves[Math.floor(Math.random()*moves.length)];
+      }
+
+      if(diff==="medium"){
+        return moves.slice().sort((a,b)=>evaluateMove(b,WHITE,board)-evaluateMove(a,WHITE,board))[0];
+      }
+
+      let bestMove=moves[0], bestScore=-Infinity;
+      for(const move of moves){
+        const nb=applyMove(board,move,WHITE);
+        const value=minimax(nb,BLACK,3,WHITE,-Infinity,Infinity) + positionWeight(move.r,move.c)*1.5;
+        if(value>bestScore){
+          bestScore=value;
+          bestMove=move;
+        }
+      }
+      return bestMove;
+    }
+
+    function cpuTurn(){
+      cpuThinking=true;
+      statusEl.textContent=t("cpuThinking");
+      render();
+      setTimeout(()=>{
+        const move=chooseCpuMove();
+        cpuThinking=false;
+        if(move) playMove(move.r,move.c,true);
+      }, 380);
+    }
+
+    function finishGame(){
+      gameOver=true;
+      cpuThinking=false;
+      render();
+
+      const {black,white}=scoreBoard();
+      let text="";
+      let result="draw";
+
+      if(black>white){ text=t("blackWin",{black,white}); result="black"; }
+      else if(white>black){ text=t("whiteWin",{black,white}); result="white"; }
+      else text=t("draw",{black,white});
+
+      winnerBanner.innerHTML=`<div class="winner-banner">${text}</div>`;
+      statusEl.textContent=t("gameOver");
+
+      saveResult(result, black, white);
+    }
+
+    function saveResult(result,black,white){
+      const mode=modeEl.value;
+      const data=loadData();
+
+      if(mode==="cpu"){
+        if(result==="black") data.wins++;
+        else if(result==="white") data.losses++;
+        else data.draws++;
+      }
+
+      data.history.unshift({
+        date:new Date().toLocaleDateString(currentLang==="pt" ? "pt-BR" : "en-US"),
+        modeKey:mode==="cpu" ? "cpu" : "human",
+        difficulty:mode==="cpu" ? difficultyEl.value : null,
+        score:`${black} × ${white}`
+      });
+
+      data.history=data.history.slice(0,10);
+      localStorage.setItem("othelloArenaData",JSON.stringify(data));
+      renderStats();
+    }
+
+    function loadData(){
+      try{
+        return JSON.parse(localStorage.getItem("othelloArenaData")) || {wins:0,losses:0,draws:0,history:[]};
+      }catch{
+        return {wins:0,losses:0,draws:0,history:[]};
+      }
+    }
+
+    function renderStats(){
+      const data=loadData();
+      winsEl.textContent=data.wins||0;
+      lossesEl.textContent=data.losses||0;
+      drawsEl.textContent=data.draws||0;
+
+      if(!data.history?.length){
+        historyEl.innerHTML=`<p style="color:var(--muted)">${t("noMatches")}</p>`;
+        return;
+      }
+
+      historyEl.innerHTML=data.history.map(item=>{
+        let modeText;
+        if(item.modeKey==="cpu"){
+          modeText=t("cpuHistory",{difficulty:t(item.difficulty || "medium")});
+        }else if(item.modeKey==="human"){
+          modeText=t("humanHistory");
+        }else if(item.modeKey==="online"){
+          modeText=t("onlineModeHistory");
+        }else{
+          modeText=item.mode || t("humanHistory");
+        }
+        return `
+          <div class="history-item">
+            <span><strong>${item.score}</strong> • ${modeText}</span>
+            <span>${item.date}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function render(){
+      boardEl.innerHTML="";
+      const onlineLocked =
+        modeEl.value==="online" &&
+        (!onlineRoomCode || !onlineRoomData?.guestUid ||
+         currentPlayer!==onlinePlayerColor || onlineBusy);
+      const valid = gameOver || cpuThinking || onlineLocked ? [] : getValidMoves(currentPlayer);
+      const validSet=new Set(valid.map(m=>`${m.r},${m.c}`));
+
+      for(let r=0;r<SIZE;r++){
+        for(let c=0;c<SIZE;c++){
+          const cell=document.createElement("button");
+          cell.className="cell";
+          cell.setAttribute("aria-label",`${String.fromCharCode(65+c)}${r+1} — ${t("rowCol",{row:r+1,col:c+1})}`);
+
+          if(validSet.has(`${r},${c}`)) cell.classList.add("valid");
+          if(hintMove && hintMove.r===r && hintMove.c===c){
+            cell.style.boxShadow="inset 0 0 0 4px rgba(245,158,11,.95)";
+          }
+
+          if(board[r][c]!==EMPTY){
+            const piece=document.createElement("div");
+            piece.className="piece "+(board[r][c]===BLACK?"black":"white");
+            cell.appendChild(piece);
+          }
+
+          cell.addEventListener("click",()=>playMove(r,c,false));
+          boardEl.appendChild(cell);
+        }
+      }
+
+      const {black,white}=scoreBoard();
+      blackScoreEl.textContent=black;
+      whiteScoreEl.textContent=white;
+      difficultyEl.disabled = modeEl.value!=="cpu";
+      undoBtn.disabled = modeEl.value==="online" || historyStack.length===0 || cpuThinking;
+      hintBtn.disabled = modeEl.value==="online" &&
+        (!onlineRoomCode || currentPlayer!==onlinePlayerColor);
+      updateOnlineUi();
+    }
+
+    async function handleModeChange(){
+      if(modeEl.value!=="online" && onlineRoomCode) await leaveOnlineRoom(false);
+      if(modeEl.value==="online"){
+        board=freshBoard();
+        currentPlayer=BLACK;
+        gameOver=false;
+        cpuThinking=false;
+        historyStack=[];
+        hintMove=null;
+        winnerBanner.innerHTML="";
+        statusEl.textContent=t("onlineIdle");
+        updateOnlineUi();
+        render();
+      }else{
+        newGame();
+      }
+    }
+
+    function newGame(){
+      board=freshBoard();
+      currentPlayer=BLACK;
+      gameOver=false;
+      cpuThinking=false;
+      historyStack=[];
+      hintMove=null;
+      winnerBanner.innerHTML="";
+      statusEl.textContent=t("turn",{player:t("blackName")});
+      render();
+    }
+
+    function undo(){
+      if(!historyStack.length || cpuThinking) return;
+      let snap=historyStack.pop();
+
+      // No modo contra CPU, tenta voltar até o turno do jogador humano.
+      if(modeEl.value==="cpu" && snap.currentPlayer===WHITE && historyStack.length){
+        snap=historyStack.pop();
+      }
+
+      board=cloneBoard(snap.board);
+      currentPlayer=snap.currentPlayer;
+      gameOver=false;
+      hintMove=null;
+      winnerBanner.innerHTML="";
+      statusEl.textContent=t("turn",{player:playerName(currentPlayer)});
+      render();
+    }
+
+    function showHint(){
+      if(gameOver || cpuThinking) return;
+      if(modeEl.value==="online" &&
+         (!onlineRoomCode || currentPlayer!==onlinePlayerColor)) return;
+      const moves=getValidMoves(currentPlayer);
+      if(!moves.length) return;
+
+      hintMove=moves.slice().sort((a,b)=>evaluateMove(b,currentPlayer,board)-evaluateMove(a,currentPlayer,board))[0];
+      statusEl.textContent=t("hintMessage",{square:`${String.fromCharCode(65+hintMove.c)}${hintMove.r+1}`});
+      render();
+    }
+
+
+    function buildShowcaseBoard(){
+      if(!showcaseBoard) return;
+      const pieces = new Map([
+        ["1,5","white"],["2,2","black"],["2,3","black"],["2,4","white"],
+        ["3,2","white"],["3,3","white"],["3,4","black"],["3,5","black"],
+        ["4,2","black"],["4,3","black"],["4,4","white"],["4,5","white"],
+        ["5,3","black"],["5,4","white"],["5,5","black"],["6,2","white"]
+      ]);
+      const frag=document.createDocumentFragment();
+      for(let r=0;r<8;r++){
+        for(let c=0;c<8;c++){
+          const cell=document.createElement("div");
+          cell.className="showcase-cell";
+          const piece=pieces.get(`${r},${c}`);
+          if(piece){
+            const disc=document.createElement("div");
+            disc.className=`showcase-disc ${piece}`;
+            cell.appendChild(disc);
+          }
+          frag.appendChild(cell);
+        }
+      }
+      showcaseBoard.appendChild(frag);
+    }
+
+    function enterArena(){
+      landingEl.classList.add("exiting");
+      window.setTimeout(()=>{
+        landingEl.hidden=true;
+        landingEl.classList.remove("exiting");
+        gameAppEl.hidden=false;
+        document.body.classList.add("arena-open");
+        window.scrollTo({top:0,behavior:"instant"});
+      },300);
+    }
+
+    function backToPortal(){
+      gameAppEl.hidden=true;
+      landingEl.hidden=false;
+      document.body.classList.remove("arena-open");
+      window.scrollTo({top:0,behavior:"instant"});
+      enterArenaBtn.focus({preventScroll:true});
+    }
+
+    enterArenaBtn.addEventListener("click",enterArena);
+    backToPortalBtn.addEventListener("click",backToPortal);
+    buildShowcaseBoard();
+
+    newGameBtn.addEventListener("click",newGame);
+    modeEl.addEventListener("change",handleModeChange);
+
+    createRoomBtn.addEventListener("click",createOnlineRoom);
+    joinRoomBtn.addEventListener("click",joinOnlineRoom);
+    leaveRoomBtn.addEventListener("click",()=>leaveOnlineRoom(true));
+    copyRoomBtn.addEventListener("click",async()=>{
+      if(!onlineRoomCode) return;
+      try{
+        await navigator.clipboard.writeText(onlineRoomCode);
+      }catch{
+        roomCodeInput.select();
+        document.execCommand("copy");
+      }
+      setOnlineMessage(t("onlineCopied",{code:onlineRoomCode}));
+    });
+    roomCodeInput.addEventListener("input",()=>{
+      roomCodeInput.value=normalizeRoomCode(roomCodeInput.value);
+    });
+    roomCodeInput.addEventListener("keydown",e=>{
+      if(e.key==="Enter") joinOnlineRoom();
+    });
+    difficultyEl.addEventListener("change",()=>{
+      if(modeEl.value==="cpu") newGame();
+    });
+    undoBtn.addEventListener("click",undo);
+    hintBtn.addEventListener("click",showHint);
+
+    clearStatsBtn.addEventListener("click",()=>{
+      if(confirm(t("clearConfirm"))){
+        localStorage.removeItem("othelloArenaData");
+        renderStats();
+      }
+    });
+
+    rulesBtn.addEventListener("click",()=>rulesDialog.showModal());
+    closeRulesBtn.addEventListener("click",()=>rulesDialog.close());
+    benefitsBtn.addEventListener("click",()=>benefitsDialog.showModal());
+    closeBenefitsBtn.addEventListener("click",()=>benefitsDialog.close());
+
+    document.querySelectorAll(".lang-btn").forEach(btn=>{
+      btn.addEventListener("click",()=>applyLanguage(btn.dataset.lang));
+    });
+
+    board=freshBoard();
+    render();
+    renderStats();
+    applyLanguage(currentLang);
+    reconnectOnlineRoom();
+  </script>
+</body>
+</html>
